@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Adapter;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.photogallery.R;
 import com.example.photogallery.model.PhotoItem;
@@ -29,6 +30,8 @@ public class PhotoGalleryFragment extends Fragment {
 
     private RecyclerView mRecyclerView;
     private PhotoRepository mRepository;
+    private int mPage_No=0;
+    private PhotoAdapter mAdapter;
 
     public PhotoGalleryFragment() {
         // Required empty public constructor
@@ -59,22 +62,41 @@ public class PhotoGalleryFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
         findViews(view);
         initView();
-
+        setListeners();
         return view;
     }
 
     private void setupAdapter(List<PhotoItem>items) {
-        PhotoAdapter adapter = new PhotoAdapter(items);
-        mRecyclerView.setAdapter(adapter);
+        if (mAdapter==null)
+            mAdapter = new PhotoAdapter(items);
+        else
+            mAdapter.setPhotoItems(items);
+
+        mRecyclerView.setAdapter(mAdapter);
+
     }
 
-    private void initView() {
-        mRecyclerView.setLayoutManager(new GridLayoutManager(getContext(), 3));
-    }
+
 
     private void findViews(View view) {
         mRecyclerView = view.findViewById(R.id.recycler_photo_gallery);
 
+    }
+    private void initView() {
+        mRecyclerView.setLayoutManager(new GridLayoutManager(getContext(), 3));
+    }
+    private void setListeners(){
+        mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                if (!mRecyclerView.canScrollVertically(1)){
+                    FlickerThread flickerThread=new FlickerThread();
+                    flickerThread.execute();
+
+                }
+            }
+        });
     }
 
     private class PhotoHolder extends RecyclerView.ViewHolder {
@@ -96,7 +118,8 @@ public class PhotoGalleryFragment extends Fragment {
         private List<PhotoItem> mPhotoItems;
 
         public PhotoAdapter(List<PhotoItem> photoItems) {
-            mPhotoItems = photoItems;
+
+            mPhotoItems=photoItems;
         }
 
         public List<PhotoItem> getPhotoItems() {
@@ -104,7 +127,7 @@ public class PhotoGalleryFragment extends Fragment {
         }
 
         public void setPhotoItems(List<PhotoItem> photoItems) {
-            mPhotoItems = photoItems;
+            mPhotoItems.addAll(photoItems);
         }
 
         @NonNull
@@ -123,13 +146,15 @@ public class PhotoGalleryFragment extends Fragment {
         public int getItemCount() {
             return mPhotoItems.size();
         }
+
+
     }
 
     private class FlickerThread extends AsyncTask<Void, Void, List<PhotoItem>> {
 
         @Override
         protected List<PhotoItem> doInBackground(Void... voids) {
-            List<PhotoItem>items=mRepository.fetchItems();
+            List<PhotoItem>items=mRepository.fetchItems(++mPage_No);
 
             return items;
 
@@ -142,6 +167,7 @@ public class PhotoGalleryFragment extends Fragment {
             setupAdapter(items);
         }
     }
+
 
 
 }
